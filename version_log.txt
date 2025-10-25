@@ -1,0 +1,17 @@
+2025-09-13 Restore advanced node to version 1.1.2-restore
+- Reconstructed advanced features from memory/spec after rollback
+- Features: aspect_ratio dropdown, two reference images, influence sliders, sampling controls as dropdown, seed & seed_list, block_none (default False), rest_only, REST fallback, retries, debug env support, blank fallback
+- Kept simple rollback node as gemini_image_simple.py
+2025-09-13 Rollback to minimal node 0.5.1-rollback
+- Archived advanced implementation to gemini_image_advanced.py (class NABAImageNodeAdvanced not registered)
+- Activated simplified node in gemini_image.py (prompt/width/height only)
+- Version set to 0.5.1-rollback
+2025-09-13 Restore advanced node 1.1.2
+- Re-activated advanced implementation in gemini_image.py
+- Version set to 1.1.2 (block_none default False, includes aspect_ratio, refs, sampling, retries)
+
+2025-09-13 Simplify to REST-only 1.2.0
+- Replaced advanced hybrid node with minimal REST-only implementation (NABAImageNodeREST)
+- Removed retry logic, multi-seed, block_none, rest_only, legacy size_preset
+- Cleaned repository of auxiliary scripts and unused modules
+- Added aspect ratio padding helper, two ref images with strengths
