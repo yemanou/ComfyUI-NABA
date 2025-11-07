@@ -50,6 +50,23 @@ def _image_to_base64(image_tensor):
     return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 class NABAImageNodeREST:
+    """
+    Stable Gemini REST image generation node (minimal, proven).
+    
+    Parameters:
+    - prompt: Text description for image generation
+    - aspect_ratio: Output canvas ratio (9 choices: 1:1, 3:2, 2:3, 4:3, 3:4, 16:9, 9:16, 21:9, 9:21)
+                   Images are padded (not cropped) to fit exact ratio, base area ~1024²
+    - seed: Optional seed for deterministic generation (0 = random)
+    - image_1, image_2: Optional reference images (inline PNG base64)
+    - image_1_strength, image_2_strength: Placeholder (0.0-2.0, not yet applied by API)
+    - temperature: Sampling randomness (0.0-1.0, default 0.6)
+    - top_p: Nucleus sampling (0.1-1.0, default 0.9)
+    - top_k: Token limit (1-256, default 64)
+    
+    Output: RGB image tensor, aspect-padded with gray bars (#202020)
+    """
+    
     @classmethod
     def INPUT_TYPES(cls):
         aspect_choices = ["1:1","3:2","2:3","4:3","3:4","16:9","9:16","21:9","9:21"]
@@ -147,7 +164,36 @@ class NABAImageNodeREST:
         return (torch.from_numpy(arr).unsqueeze(0).contiguous(),)
 
 class NABAImageNode:
-    """Enhanced Gemini image generation with 5 reference images"""
+    """
+    Enhanced Gemini image generation node with expanded capabilities.
+    
+    Features:
+    - Up to 5 reference images (vs 2 in REST node)
+    - 15 aspect ratios including ultra-wide (21:9, 9:21) and portrait/landscape variants
+    - 4 size presets: 512², 768², 1024² (default), 1536² for quality control
+    - Extended temperature range (0.0-1.2) for more creative control
+    - Enhanced top_p and top_k options
+    
+    Parameters:
+    - prompt: Text description for image generation
+    - aspect_ratio: Output canvas ratio (padded, not cropped). Choices:
+        Standard: 1:1, 3:2, 2:3, 4:3, 3:4
+        Widescreen: 16:9, 9:16, 21:9, 9:21
+        Extended: 5:4, 4:5, 3:1, 1:3, 2:1, 1:2
+    - size_preset: Base resolution (affects detail level):
+        512x512: Fast, lower detail
+        768x768: Balanced
+        1024x1024: Default, good quality
+        1536x1536: Highest quality, slower
+    - seed: Optional deterministic seed (0 = random)
+    - image_1 to image_5: Optional reference images (PNG inline)
+    - image_X_strength: Reference influence (0.0-2.0, placeholder - not yet applied by API)
+    - temperature: Sampling randomness (0.0=focused, 1.2=very creative)
+    - top_p: Nucleus sampling threshold (0.1-1.0)
+    - top_k: Token sampling limit (1-256)
+    
+    Output: Single RGB image tensor, padded to requested aspect ratio
+    """
     
     @classmethod
     def INPUT_TYPES(cls):
