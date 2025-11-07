@@ -146,6 +146,121 @@ class NABAImageNodeREST:
             arr = np.repeat(arr[..., None], 3, axis=2)
         return (torch.from_numpy(arr).unsqueeze(0).contiguous(),)
 
+class NABAImageNode:
+    """Enhanced Gemini image generation with 5 reference images"""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        aspect_choices = ["1:1","3:2","2:3","4:3","3:4","16:9","9:16","21:9","9:21","5:4","4:5","3:1","1:3","2:1","1:2"]
+        size_presets = ["512x512","768x768","1024x1024","1536x1536"]
+        temp_choices = ["0.0","0.2","0.4","0.6","0.8","1.0","1.2"]
+        top_p_choices = ["0.1","0.3","0.5","0.7","0.9","0.95","1.0"]
+        top_k_choices = ["1","8","16","32","64","128","256"]
+        return {
+            "required": {
+                "prompt": ("STRING", {"multiline": True, "default": "A beautiful landscape photograph"}),
+                "aspect_ratio": ("STRING", {"default": "1:1", "choices": aspect_choices}),
+                "size_preset": ("STRING", {"default": "1024x1024", "choices": size_presets}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 2**31-1}),
+                "image_1": ("IMAGE", {}),
+                "image_1_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
+                "image_2": ("IMAGE", {}),
+                "image_2_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
+                "image_3": ("IMAGE", {}),
+                "image_3_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
+                "image_4": ("IMAGE", {}),
+                "image_4_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
+                "image_5": ("IMAGE", {}),
+                "image_5_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
+                "temperature": ("STRING", {"default": "0.6", "choices": temp_choices}),
+                "top_p": ("STRING", {"default": "0.9", "choices": top_p_choices}),
+                "top_k": ("STRING", {"default": "64", "choices": top_k_choices}),
+            }
+        }
 
-NODE_CLASS_MAPPINGS = {"NABAImageNodeREST": NABAImageNodeREST}
-NODE_DISPLAY_NAME_MAPPINGS = {"NABAImageNodeREST": "NABA Image (Gemini REST)"}
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "generate"
+    CATEGORY = "image/NABA"
+
+    def generate(self, prompt, aspect_ratio="1:1", size_preset="1024x1024", seed=0,
+                 image_1=None, image_1_strength=0.5, image_2=None, image_2_strength=0.5,
+                 image_3=None, image_3_strength=0.5, image_4=None, image_4_strength=0.5,
+                 image_5=None, image_5_strength=0.5, temperature="0.6", top_p="0.9", top_k="64"):
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("❌ Missing GEMINI_API_KEY")
+
+        url = os.getenv("GEMINI_URL", "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent")
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+
+        parts = [{"text": prompt}]
+        for img in [image_1, image_2, image_3, image_4, image_5]:
+            if img is not None:
+                parts.append({"inline_data": {"mime_type": "image/png", "data": _image_to_base64(img)}})
+
+        try:
+            _temp = float(temperature)
+        except:
+            _temp = 0.6
+        try:
+            _top_p = float(top_p)
+        except:
+            _top_p = 0.9
+        try:
+            _top_k = int(top_k)
+        except:
+            _top_k = 64
+
+        generation_config = {"temperature": _temp, "topP": _top_p, "topK": _top_k}
+        if seed and seed > 0:
+            generation_config["seed"] = seed
+
+        payload = {"contents": [{"parts": parts}], "generationConfig": generation_config}
+
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+
+        img = None
+        try:
+            candidates_parts = result["candidates"][0]["content"]["parts"]
+            for p in candidates_parts:
+                if "inlineData" in p:
+                    raw = base64.b64decode(p["inlineData"]["data"])
+                    img = Image.open(io.BytesIO(raw)).convert("RGB")
+                    break
+                elif "inline_data" in p:
+                    raw = base64.b64decode(p["inline_data"]["data"])
+                    img = Image.open(io.BytesIO(raw)).convert("RGB")
+                    break
+                elif "blob" in p:
+                    raw = base64.b64decode(p["blob"])
+                    img = Image.open(io.BytesIO(raw)).convert("RGB")
+                    break
+        except Exception as e:
+            print(f"[NABAImageNode] decode fail: {e}")
+
+        try:
+            base_size = int(size_preset.split("x")[0])
+        except:
+            base_size = 1024
+
+        if img is None:
+            print("[NABAImageNode] no image returned; using fallback")
+            target_w, target_h = _resolve_aspect(aspect_ratio, base_size)
+            img = Image.new("RGB", (target_w, target_h), (64, 64, 64))
+        else:
+            target_w, target_h = _resolve_aspect(aspect_ratio, base_size)
+            img = _pad_to_aspect(img, target_w, target_h)
+
+        arr = np.asarray(img, dtype=np.uint8).astype(np.float32) / 255.0
+        if arr.ndim == 2:
+            arr = np.repeat(arr[..., None], 3, axis=2)
+        return (torch.from_numpy(arr).unsqueeze(0).contiguous(),)
+
+
+NODE_CLASS_MAPPINGS = {"NABAImageNodeREST": NABAImageNodeREST, "NABAImageNode": NABAImageNode}
+NODE_DISPLAY_NAME_MAPPINGS = {"NABAImageNodeREST": "NABA Image (Gemini REST)", "NABAImageNode": "NABA Image (Gemini Enhanced)"}
