@@ -90,6 +90,11 @@ class NABAImageNodeREST:
                 "top_k": ("STRING", {"default": "64", "choices": top_k_choices}),
             }
         }
+    
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        # Force re-evaluation when parameters change
+        return float("nan")
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate"
@@ -225,6 +230,11 @@ class NABAImageNode:
                 "top_k": ("STRING", {"default": "64", "choices": top_k_choices}),
             }
         }
+    
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        # Force re-evaluation when parameters change
+        return float("nan")
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "generate"
