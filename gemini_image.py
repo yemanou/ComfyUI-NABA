@@ -181,10 +181,10 @@ class NABAImageNode:
         Widescreen: 16:9, 9:16, 21:9, 9:21
         Extended: 5:4, 4:5, 3:1, 1:3, 2:1, 1:2
     - size_preset: Base resolution (affects detail level):
-        512x512: Fast, lower detail
-        768x768: Balanced
-        1024x1024: Default, good quality
-        1536x1536: Highest quality, slower
+        Small: 256², 384², 512² (fast)
+        Medium: 640², 768², 832², 896² (balanced)
+        Large: 1024² (default), 1152², 1280² (high quality)
+        XL: 1440², 1536², 1792², 2048² (highest quality, slower)
     - seed: Optional deterministic seed (0 = random)
     - image_1 to image_5: Optional reference images (PNG inline)
     - image_X_strength: Reference influence (0.0-2.0, placeholder - not yet applied by API)
@@ -198,13 +198,13 @@ class NABAImageNode:
     @classmethod
     def INPUT_TYPES(cls):
         aspect_choices = ["1:1","3:2","2:3","4:3","3:4","16:9","9:16","21:9","9:21","5:4","4:5","3:1","1:3","2:1","1:2"]
-        size_presets = ["512x512","768x768","1024x1024","1536x1536"]
+        size_presets = ["256x256","384x384","512x512","640x640","768x768","832x832","896x896","1024x1024","1152x1152","1280x1280","1440x1440","1536x1536","1792x1792","2048x2048"]
         temp_choices = ["0.0","0.2","0.4","0.6","0.8","1.0","1.2"]
         top_p_choices = ["0.1","0.3","0.5","0.7","0.9","0.95","1.0"]
         top_k_choices = ["1","8","16","32","64","128","256"]
         return {
             "required": {
-                "prompt": ("STRING", {"multiline": True, "default": "A beautiful landscape photograph"}),
+                "prompt": ("STRING", {"multiline": True, "default": "Terminator protecting pretty woman"}),
                 "aspect_ratio": ("STRING", {"default": "1:1", "choices": aspect_choices}),
                 "size_preset": ("STRING", {"default": "1024x1024", "choices": size_presets}),
             },
