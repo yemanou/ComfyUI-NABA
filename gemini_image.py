@@ -265,6 +265,14 @@ class NABAImageNode:
             generation_config["seed"] = seed
 
         payload = {"contents": [{"parts": parts}], "generationConfig": generation_config}
+        
+        # Debug logging
+        print(f"[NABAImageNode] Generation config being sent:")
+        print(f"  temperature: {generation_config.get('temperature')}")
+        print(f"  topP: {generation_config.get('topP')}")
+        print(f"  topK: {generation_config.get('topK')}")
+        print(f"  seed: {generation_config.get('seed', 'not set')}")
+        print(f"  size_preset: {size_preset} -> base_size will be: {size_preset.split('x')[0]}")
 
         response = requests.post(url, headers=headers, json=payload)
         response.raise_for_status()
