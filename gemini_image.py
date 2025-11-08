@@ -125,7 +125,32 @@ class NABAImageNodeREST:
                     }
                 })
 
-        payload = {"contents": [{"parts": parts}]}
+        # Parse generation parameters
+        try:
+            _temp = float(temperature)
+        except:
+            _temp = 0.6
+        try:
+            _top_p = float(top_p)
+        except:
+            _top_p = 0.9
+        try:
+            _top_k = int(top_k)
+        except:
+            _top_k = 64
+
+        generation_config = {"temperature": _temp, "topP": _top_p, "topK": _top_k}
+        if seed and seed > 0:
+            generation_config["seed"] = seed
+
+        payload = {"contents": [{"parts": parts}], "generationConfig": generation_config}
+        
+        # Debug logging
+        print(f"[NABAImageNodeREST] Generation config being sent:")
+        print(f"  temperature: {generation_config.get('temperature')}")
+        print(f"  topP: {generation_config.get('topP')}")
+        print(f"  topK: {generation_config.get('topK')}")
+        print(f"  seed: {generation_config.get('seed', 'not set')}")
 
         # Call REST API
         response = requests.post(url, headers=headers, json=payload)
