@@ -239,6 +239,7 @@ class NABAImageNode:
                 "size_preset": ("STRING", {"default": "1024x1024", "choices": size_presets}),
             },
             "optional": {
+                "reset_defaults": ("BOOLEAN", {"default": False, "label_on": "Reset", "label_off": "Normal"}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 2**31-1}),
                 "image_1": ("IMAGE", {}),
                 "image_1_strength": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 2.0, "step": 0.05}),
@@ -268,7 +269,19 @@ class NABAImageNode:
     def generate(self, prompt, aspect_ratio="1:1", size_preset="1024x1024", seed=0,
                  image_1=None, image_1_strength=0.5, image_2=None, image_2_strength=0.5,
                  image_3=None, image_3_strength=0.5, image_4=None, image_4_strength=0.5,
-                 image_5=None, image_5_strength=0.5, temperature="0.6", top_p="0.9", top_k="64"):
+                 image_5=None, image_5_strength=0.5, temperature="0.6", top_p="0.9", top_k="64",
+                 reset_defaults=False):
+
+        # If reset is toggled, use defaults
+        if reset_defaults:
+            prompt = "Terminator protecting pretty woman"
+            aspect_ratio = "1:1"
+            size_preset = "1024x1024"
+            seed = 0
+            temperature = "0.6"
+            top_p = "0.9"
+            top_k = "64"
+            print("🔄 Reset to defaults")
 
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
